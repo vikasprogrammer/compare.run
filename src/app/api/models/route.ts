@@ -1,22 +1,10 @@
 import { NextResponse } from 'next/server'
 import { MODELS } from '@/lib/catalog'
 import { PROVIDERS } from '@/lib/providers'
-import type { Modality } from '@/lib/types'
+/** What the picker submits. Ad-hoc models use "providerId::providerModel". */
+import type { PickerModel } from '@/lib/client'
 
 export const dynamic = 'force-dynamic'
-
-export interface PickerModel {
-  /** What the picker submits. Ad-hoc models use "providerId::providerModel". */
-  id: string
-  label: string
-  provider: string
-  providerId: string
-  modalities: Modality[]
-  note?: string
-  price?: { in: number; out: number }
-  /** True for the hand-curated shortlist shown by default. */
-  curated: boolean
-}
 
 // A provider's catalogue changes rarely; refetching it per keystroke would be
 // rude to them and slow for us.

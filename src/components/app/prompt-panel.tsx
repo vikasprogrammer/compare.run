@@ -1,22 +1,42 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Check, ChevronDown, ChevronUp, Copy, GitCompare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { diffWords } from '@/lib/diff'
 import type { Run } from '@/lib/types'
 
-/** Longer than this and the prompt is collapsed until asked for. */
-const COLLAPSE_OVER = 180
-
 export function PromptPanel({ run, previous }: { run: Run; previous?: Run }) {
   const [expanded, setExpanded] = useState(false)
   const [showDiff, setShowDiff] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [overflows, setOverflows] = useState(false)
+  const bodyRef = useRef<HTMLParagraphElement>(null)
 
   const prompt = run.prompt
   const changed = Boolean(previous && previous.prompt.trim() !== prompt.trim())
-  const collapsible = prompt.length > COLLAPSE_OVER
+
+  // Selecting a different run starts fresh rather than inheriting the last
+  // one's expanded state.
+  useEffect(() => {
+    setExpanded(false)
+    setShowDiff(false)
+  }, [run.id])
+
+  /**
+   * Whether the clamp is actually hiding anything, measured rather than
+   * guessed from a character count — the same prompt wraps differently at
+   * different widths, so a threshold shows "More" when there is no more.
+   */
+  useLayoutEffect(() => {
+    const el = bodyRef.current
+    if (!el || expanded) return
+    const measure = () => setOverflows(el.scrollHeight - el.clientHeight > 1)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [prompt, expanded, showDiff])
 
   const parts = useMemo(
     () => (showDiff && previous ? diffWords(previous.prompt, prompt) : null),
@@ -37,6 +57,7 @@ export function PromptPanel({ run, previous }: { run: Run; previous?: Run }) {
     <div className="mt-1.5">
       {parts ? (
         <p
+          ref={bodyRef}
           className={cn(
             'text-[12px] leading-relaxed text-muted-foreground',
             !expanded && 'line-clamp-3',
@@ -58,6 +79,7 @@ export function PromptPanel({ run, previous }: { run: Run; previous?: Run }) {
         </p>
       ) : (
         <p
+          ref={bodyRef}
           className={cn(
             'whitespace-pre-wrap text-[12px] leading-relaxed text-muted-foreground',
             !expanded && 'line-clamp-2',
@@ -68,7 +90,7 @@ export function PromptPanel({ run, previous }: { run: Run; previous?: Run }) {
       )}
 
       <div className="mt-1 flex flex-wrap items-center gap-3">
-        {(collapsible || parts) && (
+        {(overflows || expanded) && (
           <Control onClick={() => setExpanded((v) => !v)}>
             {expanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
             {expanded ? 'Less' : 'More'}

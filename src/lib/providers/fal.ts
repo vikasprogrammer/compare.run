@@ -1,5 +1,5 @@
 import type { VideoOutput } from '../types'
-import type { GenerateRequest, GenerateResult, Provider } from './types'
+import type { GenerateRequest, GenerateResult, Provider, ProviderModel } from './types'
 
 const QUEUE = 'https://queue.fal.run'
 const POLL_MS = 3000
@@ -44,6 +44,49 @@ export const fal: Provider = {
 
   isConfigured() {
     return Boolean(process.env.FAL_KEY)
+  },
+
+  /**
+   * fal's catalogue moves quickly — new video models land continuously — so the
+   * picker reads it live rather than relying on the curated shortlist, which
+   * goes stale within weeks.
+   */
+  async listModels(): Promise<ProviderModel[]> {
+    const key = process.env.FAL_KEY
+    if (!key) return []
+
+    const out: ProviderModel[] = []
+    let cursor: string | undefined
+    // Paginated 100 at a time; the cap is a guard against an endless cursor.
+    for (let page = 0; page < 12; page++) {
+      const url = new URL('https://api.fal.ai/v1/models')
+      if (cursor) url.searchParams.set('cursor', cursor)
+
+      const res = await fetch(url, { headers: { authorization: `Key ${key}` } })
+      if (!res.ok) break
+      const body = (await res.json()) as {
+        models?: { endpoint_id?: string; metadata?: { display_name?: string; category?: string } }[]
+        next_cursor?: string
+        has_more?: boolean
+      }
+
+      for (const m of body.models ?? []) {
+        // Only text-to-video: this app gives every model the same prompt, and
+        // an image-to-video model has nothing to work from.
+        if (m.metadata?.category !== 'text-to-video' || !m.endpoint_id) continue
+        out.push({
+          id: m.endpoint_id,
+          // Every entry here is text-to-video, so fal's own suffix is noise in
+          // a picker chip that has little room to spare.
+          label: (m.metadata.display_name ?? m.endpoint_id).replace(/\s+Text[- ]to[- ]Video$/i, ''),
+          modalities: ['video'],
+        })
+      }
+
+      if (!body.has_more || !body.next_cursor) break
+      cursor = body.next_cursor
+    }
+    return out
   },
 
   async generate(req: GenerateRequest): Promise<GenerateResult> {

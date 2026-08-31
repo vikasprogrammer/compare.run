@@ -10,8 +10,8 @@ import { ModalityIcon } from '@/components/app/bits'
 import { EXPERIMENT_TYPES, modelsFor, templatesFor } from '@/lib/catalog'
 import { Input } from '@/components/ui/input'
 import { displayModel } from '@/lib/model-name'
-import type { LaunchInput, ProviderStatus } from '@/lib/client'
-import type { PickerModel } from '@/app/api/models/route'
+import type { LaunchInput, PickerModel } from '@/lib/client'
+
 import type { Modality } from '@/lib/types'
 
 /**
@@ -34,7 +34,7 @@ export function QuickRun({
   onRerun,
   seed,
   unsupported,
-  providers,
+  catalogue,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
@@ -44,7 +44,8 @@ export function QuickRun({
   seed: RerunSeed | null
   /** Modalities no configured provider can serve. */
   unsupported: Modality[]
-  providers: ProviderStatus[]
+  /** Prefetched on app load; null until it lands. */
+  catalogue: PickerModel[] | null
 }) {
   const [type, setType] = useState<Modality>('code')
   const [prompt, setPrompt] = useState('')
@@ -57,16 +58,9 @@ export function QuickRun({
 
   const [browsing, setBrowsing] = useState(false)
   const [query, setQuery] = useState('')
-  const [catalogue, setCatalogue] = useState<PickerModel[] | null>(null)
 
-  // The full list is hundreds of models, so it is fetched only when asked for.
-  useEffect(() => {
-    if (!browsing || catalogue) return
-    fetch('/api/models')
-      .then((r) => r.json())
-      .then((d: { models: PickerModel[] }) => setCatalogue(d.models))
-      .catch(() => setCatalogue([]))
-  }, [browsing, catalogue])
+  // The catalogue carries a proper display name; the wire id is a last resort.
+  const labelOf = (id: string) => catalogue?.find((m) => m.id === id)?.label ?? displayModel(id)
 
   const matches = useMemo(() => {
     if (!catalogue) return []
@@ -136,30 +130,40 @@ export function QuickRun({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* what */}
-          <div className="grid grid-cols-4 gap-1.5">
-            {EXPERIMENT_TYPES.map((t) => {
-              const on = type === t.id
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => {
-                    setTouched(true)
-                    setType(t.id)
-                  }}
-                  className={cn(
-                    'flex flex-col items-center gap-1.5 rounded-md border px-2 py-2.5 text-[11.5px] font-medium transition',
-                    on
-                      ? 'border-foreground/25 bg-muted text-foreground'
-                      : 'text-muted-foreground hover:bg-muted/60',
-                  )}
-                >
-                  <ModalityIcon type={t.id} />
-                  {t.label.replace(' generation', '').replace(' writing', '')}
-                </button>
-              )
-            })}
-          </div>
+          {/* what — fixed on a re-run: an experiment's modality is what it is */}
+          {seed ? (
+            <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-2.5 py-2 text-[12px] text-muted-foreground">
+              <ModalityIcon type={type} className="size-3.5" />
+              <span className="font-medium text-foreground">
+                {EXPERIMENT_TYPES.find((t) => t.id === type)?.label}
+              </span>
+              <span>&mdash; same task, edit the prompt or the line-up below</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-1.5">
+              {EXPERIMENT_TYPES.map((t) => {
+                const on = type === t.id
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      setTouched(true)
+                      setType(t.id)
+                    }}
+                    className={cn(
+                      'flex flex-col items-center gap-1.5 rounded-md border px-2 py-2.5 text-[11.5px] font-medium transition',
+                      on
+                        ? 'border-foreground/25 bg-muted text-foreground'
+                        : 'text-muted-foreground hover:bg-muted/60',
+                    )}
+                  >
+                    <ModalityIcon type={t.id} />
+                    {t.label.replace(' generation', '').replace(' writing', '')}
+                  </button>
+                )
+              })}
+            </div>
+          )}
 
           {/* words */}
           <div className="space-y-1.5">
@@ -211,7 +215,7 @@ export function QuickRun({
                     className="inline-flex items-center gap-1.5 rounded-md border border-foreground/25 bg-muted px-2 py-1 text-[11.5px] text-foreground"
                     title={id}
                   >
-                    {displayModel(id)}
+                    {labelOf(id)}
                     <X className="size-3 opacity-60" />
                   </button>
                 ))}

@@ -23,6 +23,23 @@ export async function fetchState(): Promise<AppState> {
   return (await res.json()) as AppState
 }
 
+export interface PickerModel {
+  id: string
+  label: string
+  provider: string
+  providerId: string
+  modalities: Modality[]
+  note?: string
+  price?: { in: number; out: number }
+  curated: boolean
+}
+
+export async function fetchModels(): Promise<PickerModel[]> {
+  const res = await fetch('/api/models', { cache: 'no-store' })
+  if (!res.ok) return []
+  return ((await res.json()) as { models: PickerModel[] }).models
+}
+
 export async function fetchRun(id: string): Promise<Run | null> {
   const res = await fetch(`/api/runs/${id}`, { cache: 'no-store' })
   if (!res.ok) return null

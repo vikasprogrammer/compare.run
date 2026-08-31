@@ -10,7 +10,16 @@ import { ResultGrid } from '@/components/app/results'
 import { QuickRun, type RerunSeed } from '@/components/app/quick-run'
 import { Connectors } from '@/components/app/connectors'
 import { PromptPanel } from '@/components/app/prompt-panel'
-import { createExperiment, fetchRun, fetchState, rerun, type AppState, type LaunchInput } from '@/lib/client'
+import {
+  createExperiment,
+  fetchModels,
+  fetchRun,
+  fetchState,
+  rerun,
+  type AppState,
+  type LaunchInput,
+  type PickerModel,
+} from '@/lib/client'
 import { isRunActive, runSummary, runTotals } from '@/lib/summary'
 import { formatDateTime, relativeTime } from '@/lib/format'
 
@@ -20,6 +29,7 @@ export default function Page() {
   const [runId, setRunId] = useState('')
   const [composerOpen, setComposerOpen] = useState(false)
   const [seed, setSeed] = useState<RerunSeed | null>(null)
+  const [models, setModels] = useState<PickerModel[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const didRestore = useRef(false)
@@ -32,6 +42,9 @@ export default function Page() {
 
   useEffect(() => {
     load().catch(() => setError('Could not reach the server.'))
+    // Warmed in the background: the catalogue is a live fan-out across every
+    // connected provider, so paying for it when the picker opens is a stall.
+    fetchModels().then(setModels).catch(() => setModels([]))
   }, [load])
 
   const experiments = state?.experiments ?? []
@@ -42,16 +55,28 @@ export default function Page() {
   const experiment = experiments.find((e) => e.id === experimentId)
   const run = runs.find((r) => r.id === runId) ?? runs[0]
   const previous = run ? runs.find((r) => r.seq < run.seq) : undefined
+  const modelLabels = useMemo(
+    () => new Map((models ?? []).map((m) => [m.id, m.label])),
+    [models],
+  )
 
   // Settle on a selection once data arrives, honouring a deep link if present.
   useEffect(() => {
     if (!state || didRestore.current) return
     didRestore.current = true
-    const p = new URLSearchParams(window.location.search)
-    const e = p.get('e')
-    const r = p.get('r')
-    setExperimentId(state.experiments.some((x) => x.id === e) ? e! : (state.experiments[0]?.id ?? ''))
-    if (state.runs.some((x) => x.id === r)) setRunId(r!)
+    const params = new URLSearchParams(window.location.search)
+    const wantedExperiment = params.get('e')
+    const wantedRun = params.get('r')
+    const run = state.runs.find((x) => x.id === wantedRun)
+
+    // A link may name only the run. Derive its experiment rather than falling
+    // back to the first one, which would silently show a different result.
+    const experimentId = state.experiments.some((x) => x.id === wantedExperiment)
+      ? wantedExperiment!
+      : (run?.experimentId ?? state.experiments[0]?.id ?? '')
+
+    setExperimentId(experimentId)
+    if (run) setRunId(run.id)
   }, [state])
 
   useEffect(() => {
@@ -290,7 +315,7 @@ export default function Page() {
                 <PromptPanel run={run} previous={previous} />
               </div>
               <ScrollArea className="min-h-0 flex-1">
-                <ResultGrid run={run} modality={experiment.type} />
+                <ResultGrid run={run} modality={experiment.type} labels={modelLabels} />
               </ScrollArea>
             </>
           ) : (
@@ -308,7 +333,7 @@ export default function Page() {
         onRerun={doRerun}
         seed={seed}
         unsupported={state?.unsupported ?? []}
-        providers={state?.providers ?? []}
+        catalogue={models}
       />
     </div>
   )

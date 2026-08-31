@@ -9,12 +9,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Skeleton } from '@/components/ui/skeleton'
 import { ImageView, VideoView } from '@/components/app/media'
 import { ScoreDots, StatusPill } from '@/components/app/bits'
-import { modelById } from '@/lib/catalog'
 import { displayModel, displayProvider } from '@/lib/model-name'
 import { formatDuration, formatUsd } from '@/lib/format'
 import type { CodeOutput, ContentOutput, HtmlPreview, Modality, Output, PreviewSpec, Result, Run, SpecPreview } from '@/lib/types'
 
-export function ResultGrid({ run, modality }: { run: Run; modality: Modality }) {
+export function ResultGrid({
+  run,
+  modality,
+  labels,
+}: {
+  run: Run
+  modality: Modality
+  /** Display names from the provider catalogue, keyed by model id. */
+  labels?: Map<string, string>
+}) {
   return (
     <div className="grid gap-3 p-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
       {run.results.map((result) => (
@@ -24,6 +32,7 @@ export function ResultGrid({ run, modality }: { run: Run; modality: Modality }) 
           runId={run.id}
           modality={modality}
           startedAt={run.startedAt}
+          label={labels?.get(result.modelId)}
         />
       ))}
     </div>
@@ -35,20 +44,22 @@ function ResultCard({
   runId,
   modality,
   startedAt,
+  label,
 }: {
   result: Result
   runId: string
   modality: Modality
   startedAt: string
+  label?: string
 }) {
-  const model = modelById(result.modelId)
+  const name = label ?? displayModel(result.modelId)
   const pending = result.status === 'queued' || result.status === 'running'
   return (
     <article className="flex flex-col overflow-hidden rounded-lg border bg-card">
       <header className="flex items-center gap-2 border-b px-3 py-2">
         <div className="min-w-0 flex-1">
           <div className="truncate text-[13px] font-medium leading-tight" title={result.modelId}>
-            {displayModel(result.modelId)}
+            {name}
           </div>
           <div className="truncate text-[11px] text-muted-foreground">{displayProvider(result.modelId)}</div>
         </div>
@@ -101,7 +112,7 @@ function ResultCard({
         ) : (
           <OutputView
             output={result.output}
-            label={displayModel(result.modelId)}
+            label={name}
             assetBase={`/api/output/${runId}/${encodeURIComponent(result.modelId)}/asset`}
           />
         )}
