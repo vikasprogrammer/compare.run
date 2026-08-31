@@ -52,6 +52,7 @@ function open(): DatabaseSync {
   g.__pgDb = db
   seed(db)
   repairDuplicatedProse(db)
+  clearSeededScores(db)
   return db
 }
 
@@ -69,6 +70,18 @@ function migrate(db: DatabaseSync): void {
       prompt = COALESCE((SELECT prompt FROM experiments e WHERE e.id = runs.experiment_id), ''),
       model_ids = COALESCE((SELECT model_ids FROM experiments e WHERE e.id = runs.experiment_id), '[]')`)
   }
+}
+
+/**
+ * The bundled examples used to ship with hand-written scores, which rendered as
+ * filled dots. Nothing can produce a score yet, so showing them advertised a
+ * feature that does not exist.
+ */
+function clearSeededScores(db: DatabaseSync): void {
+  const done = db.prepare("SELECT value FROM meta WHERE key = 'clear_scores_v1'").get()
+  if (done) return
+  const { changes } = db.prepare('UPDATE results SET score = NULL WHERE score IS NOT NULL').run()
+  db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('clear_scores_v1', ?)").run(String(changes))
 }
 
 /**

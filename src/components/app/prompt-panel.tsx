@@ -67,7 +67,7 @@ export function PromptPanel({ run, previous }: { run: Run; previous?: Run }) {
             part.type === 'same' ? (
               <span key={i}>{part.text}</span>
             ) : part.type === 'add' ? (
-              <span key={i} className="rounded-[2px] bg-score-good/15 text-score-good">
+              <span key={i} className="rounded-[2px] bg-positive/15 text-positive">
                 {part.text}
               </span>
             ) : (
@@ -98,7 +98,7 @@ export function PromptPanel({ run, previous }: { run: Run; previous?: Run }) {
         )}
 
         <Control onClick={copy}>
-          {copied ? <Check className="size-3 text-score-good" /> : <Copy className="size-3" />}
+          {copied ? <Check className="size-3 text-positive" /> : <Copy className="size-3" />}
           {copied ? 'Copied' : 'Copy prompt'}
         </Control>
 
@@ -111,7 +111,7 @@ export function PromptPanel({ run, previous }: { run: Run; previous?: Run }) {
 
         {showDiff && (
           <span className="text-[10.5px] text-muted-foreground/70">
-            <span className="text-score-good">added</span> ·{' '}
+            <span className="text-positive">added</span> ·{' '}
             <span className="text-destructive line-through">removed</span>
           </span>
         )}

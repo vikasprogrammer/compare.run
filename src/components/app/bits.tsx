@@ -11,7 +11,7 @@ export function ModalityIcon({ type, className }: { type: Modality; className?: 
 }
 
 const STATUS: Record<RunStatus, { label: string; className: string }> = {
-  complete: { label: 'Complete', className: 'border-score-good/30 bg-score-good/10 text-score-good' },
+  complete: { label: 'Complete', className: 'border-positive/30 bg-positive/10 text-positive' },
   running: { label: 'Running', className: 'border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400' },
   failed: { label: 'Failed', className: 'border-destructive/30 bg-destructive/10 text-destructive' },
   queued: { label: 'Queued', className: 'border-border bg-muted text-muted-foreground' },
@@ -29,26 +29,6 @@ export function StatusPill({ status, className }: { status: RunStatus; className
     >
       {status === 'running' && <span className="size-1.5 animate-pulse rounded-full bg-current" />}
       {s.label}
-    </span>
-  )
-}
-
-/**
- * Five dots, filled to the reviewer's score. Renders nothing when there is no
- * score: there is no way to record one yet, so a placeholder would advertise a
- * feature that does not exist.
- */
-export function ScoreDots({ score }: { score: number | null }) {
-  if (score === null) return null
-  const tone = score >= 4 ? 'bg-score-good' : score >= 3 ? 'bg-score-mid' : 'bg-score-bad'
-  return (
-    <span className="inline-flex items-center gap-1" title={`Scored ${score} of 5`}>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <span
-          key={n}
-          className={cn('size-1.5 rounded-full', n <= score ? tone : 'bg-border')}
-        />
-      ))}
     </span>
   )
 }

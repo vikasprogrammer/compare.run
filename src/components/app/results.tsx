@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ImageView, VideoView } from '@/components/app/media'
-import { ScoreDots, StatusPill } from '@/components/app/bits'
+import { StatusPill } from '@/components/app/bits'
 import { displayModel, displayProvider } from '@/lib/model-name'
 import { formatDuration, formatUsd } from '@/lib/format'
 import type { CodeOutput, ContentOutput, HtmlPreview, Modality, Output, PreviewSpec, Result, Run, SpecPreview } from '@/lib/types'
@@ -63,11 +63,7 @@ function ResultCard({
           </div>
           <div className="truncate text-[11px] text-muted-foreground">{displayProvider(result.modelId)}</div>
         </div>
-        {result.status === 'complete' ? (
-          <ScoreDots score={result.score} />
-        ) : (
-          <StatusPill status={result.status} />
-        )}
+        {result.status !== 'complete' && <StatusPill status={result.status} />}
       </header>
 
       <div className="flex items-center gap-3 border-b bg-muted/25 px-3 py-1.5 font-mono text-[11px] tabular-nums text-muted-foreground">
@@ -220,7 +216,7 @@ function CodeView({ output }: { output: CodeOutput }) {
             className={cn(
               'inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-[10.5px]',
               output.tests.passed === output.tests.total
-                ? 'border-score-good/30 bg-score-good/10 text-score-good'
+                ? 'border-positive/30 bg-positive/10 text-positive'
                 : 'border-destructive/30 bg-destructive/10 text-destructive',
             )}
           >

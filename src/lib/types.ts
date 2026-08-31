@@ -70,7 +70,10 @@ export interface Result {
   costUsd: number | null
   tokensIn: number
   tokensOut: number
-  /** 1-5 human score recorded after review, null if not yet judged. */
+  /**
+   * 1-5 human score. Always null today: there is no judgement layer yet, so
+   * nothing writes this. Kept as the hook the feature will land on.
+   */
   score: number | null
   output: Output
   error?: string

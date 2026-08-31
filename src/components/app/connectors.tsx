@@ -28,7 +28,7 @@ export function Connectors({ state }: { state: AppState | null }) {
       <PopoverTrigger asChild>
         <button className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-[11px] text-muted-foreground transition hover:bg-muted hover:text-foreground">
           <span
-            className={cn('size-1.5 rounded-full', ready.length ? 'bg-score-good' : 'bg-muted-foreground/50')}
+            className={cn('size-1.5 rounded-full', ready.length ? 'bg-positive' : 'bg-muted-foreground/50')}
           />
           {label}
           <ChevronDown className="size-3 opacity-60" />
@@ -50,14 +50,14 @@ export function Connectors({ state }: { state: AppState | null }) {
                 <span
                   className={cn(
                     'size-1.5 shrink-0 rounded-full',
-                    p.configured ? 'bg-score-good' : 'bg-muted-foreground/40',
+                    p.configured ? 'bg-positive' : 'bg-muted-foreground/40',
                   )}
                 />
                 <span className="text-[12.5px] font-medium">{p.label}</span>
                 <span
                   className={cn(
                     'ml-auto text-[10.5px]',
-                    p.configured ? 'text-score-good' : 'text-muted-foreground',
+                    p.configured ? 'text-positive' : 'text-muted-foreground',
                   )}
                 >
                   {p.configured ? 'Connected' : 'Not connected'}

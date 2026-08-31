@@ -86,7 +86,7 @@ const CODE_RUNS: SeedRun[] = [
         costUsd: 0.148,
         tokensIn: 322_000,
         tokensOut: 3_297,
-        score: 5,
+        score: null,
         output: {
           kind: 'code',
           summary:
@@ -182,7 +182,7 @@ document.querySelector('[data-nav-toggle]')?.addEventListener('click', () => {
         costUsd: null,
         tokensIn: 198_400,
         tokensOut: 2_610,
-        score: 4,
+        score: null,
         output: {
           kind: 'code',
           summary:
@@ -260,7 +260,7 @@ document.querySelector('[data-nav-toggle]')?.addEventListener('click', () => {
         costUsd: 0.061,
         tokensIn: 141_900,
         tokensOut: 4_120,
-        score: 2,
+        score: null,
         output: {
           kind: 'code',
           summary:
@@ -325,7 +325,7 @@ document.querySelector('[data-nav-toggle]')?.addEventListener('click', () => {
         costUsd: 0.131,
         tokensIn: 288_000,
         tokensOut: 2_940,
-        score: 4,
+        score: null,
         output: {
           kind: 'code',
           summary: 'Clean structure, but the copy stayed generic without the extra instruction.',
@@ -364,7 +364,7 @@ document.querySelector('[data-nav-toggle]')?.addEventListener('click', () => {
         costUsd: null,
         tokensIn: 176_200,
         tokensOut: 2_180,
-        score: 3,
+        score: null,
         output: {
           kind: 'code',
           summary: 'Solid markup, default styling, no attempt at a visual point of view.',
@@ -403,7 +403,7 @@ document.querySelector('[data-nav-toggle]')?.addEventListener('click', () => {
         costUsd: 0.052,
         tokensIn: 132_100,
         tokensOut: 3_610,
-        score: 2,
+        score: null,
         output: {
           kind: 'code',
           summary: 'Same placeholder problem as run 2 — the copy instruction did not change this.',
@@ -449,7 +449,7 @@ const MEDIA_RUNS: SeedRun[] = [
         costUsd: 0.038,
         tokensIn: 1_240,
         tokensOut: 640,
-        score: 5,
+        score: null,
         output: {
           kind: 'content',
           summary: 'Held the constraints, led with the reader rather than the feature.',
@@ -497,7 +497,7 @@ const MEDIA_RUNS: SeedRun[] = [
         costUsd: null,
         tokensIn: 1_240,
         tokensOut: 590,
-        score: 3,
+        score: null,
         output: {
           kind: 'content',
           summary: 'Well-organised, but drifted into the launch-copy register the brief ruled out.',
@@ -543,7 +543,7 @@ const MEDIA_RUNS: SeedRun[] = [
         costUsd: 0.004,
         tokensIn: 1_240,
         tokensOut: 720,
-        score: 2,
+        score: null,
         output: {
           kind: 'content',
           summary: 'Broke two explicit constraints: invented a statistic and used an exclamation mark.',
@@ -693,7 +693,7 @@ const MEDIA_RUNS: SeedRun[] = [
         costUsd: 1.2,
         tokensIn: 0,
         tokensOut: 0,
-        score: 4,
+        score: null,
         output: {
           kind: 'video',
           summary: 'Good motion, but cut to a second angle instead of holding one continuous move.',
@@ -717,7 +717,7 @@ const MEDIA_RUNS: SeedRun[] = [
         costUsd: 1.5,
         tokensIn: 0,
         tokensOut: 0,
-        score: 5,
+        score: null,
         output: {
           kind: 'video',
           summary: 'One unbroken move, exactly as briefed.',
@@ -741,7 +741,7 @@ const MEDIA_RUNS: SeedRun[] = [
         costUsd: 0.9,
         tokensIn: 0,
         tokensOut: 0,
-        score: 3,
+        score: null,
         output: {
           kind: 'video',
           summary: 'Camera move is right but the desk never visibly tidies between beats.',
@@ -778,7 +778,7 @@ const MEDIA_RUNS: SeedRun[] = [
         costUsd: 0.13,
         tokensIn: 0,
         tokensOut: 0,
-        score: 5,
+        score: null,
         output: {
           kind: 'image',
           summary: 'Spelled the word correctly in all four variations, with even letter spacing.',
@@ -798,7 +798,7 @@ const MEDIA_RUNS: SeedRun[] = [
         costUsd: 0.17,
         tokensIn: 0,
         tokensOut: 0,
-        score: 3,
+        score: null,
         output: {
           kind: 'image',
           summary: 'Three of four spelled correctly; one rendered "MERIDLAN".',
@@ -818,7 +818,7 @@ const MEDIA_RUNS: SeedRun[] = [
         costUsd: 0.05,
         tokensIn: 0,
         tokensOut: 0,
-        score: 2,
+        score: null,
         output: {
           kind: 'image',
           summary: 'Best material rendering of the three, worst typography — none of the four are readable.',
@@ -851,7 +851,7 @@ const MEDIA_RUNS: SeedRun[] = [
         costUsd: 0.042,
         tokensIn: 46_200,
         tokensOut: 1_890,
-        score: 5,
+        score: null,
         output: {
           kind: 'code',
           summary: 'Wrote 11 cases including the quoted-comma and even-length-median ones, and all pass.',
@@ -919,7 +919,7 @@ test('returns null when nothing is numeric', () => {
         costUsd: null,
         tokensIn: 38_900,
         tokensOut: 1_240,
-        score: 2,
+        score: null,
         output: {
           kind: 'code',
           summary: 'Split on commas without handling quotes, so one of its own tests fails.',
