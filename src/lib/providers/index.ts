@@ -1,4 +1,5 @@
 import { createCompatibleProvider } from './openai-compatible'
+import { fal } from './fal'
 import type { Provider } from './types'
 import type { Modality } from '../types'
 
@@ -21,6 +22,7 @@ export const PROVIDERS: Provider[] = [
     docsUrl: 'https://openrouter.ai/keys',
     modalities: ['code', 'content', 'image'],
     requestUsageAccounting: true,
+    listsModels: true,
     supportsImageModality: true,
     // OpenRouter shows these on its public app rankings and in your usage
     // dashboard; APP_URL lets a deployment identify itself as the real site.
@@ -29,6 +31,7 @@ export const PROVIDERS: Provider[] = [
       'X-Title': 'compare.run',
     },
   }),
+  fal,
 ]
 
 /** Configured providers that can produce this kind of work. */

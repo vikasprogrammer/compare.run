@@ -1,5 +1,5 @@
 import { getRun } from '@/lib/db'
-import { modelById } from '@/lib/catalog'
+import { displayModel } from '@/lib/model-name'
 import type { Output } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -21,7 +21,7 @@ export async function GET(
   const result = run.results.find((r) => r.modelId === decodeURIComponent(modelId))
   if (!result) return new Response('Result not found', { status: 404 })
 
-  const label = modelById(result.modelId)?.label ?? result.modelId
+  const label = displayModel(result.modelId)
   const html = render(result.output, label, result.error)
   const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
@@ -31,7 +31,9 @@ export async function GET(
       'cache-control': 'no-store',
       ...(download ? { 'content-disposition': `attachment; filename="${slug}.html"` } : {}),
       // Generated code runs here in isolation; keep it off the network.
-      'content-security-policy': "default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; font-src data:",
+      // Generated code stays sandboxed; media needs the provider's CDN.
+      'content-security-policy':
+        "default-src 'none'; img-src data: blob: https:; media-src https: data: blob:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; font-src data:",
     },
   })
 }
@@ -89,10 +91,13 @@ function render(output: Output, label: string, error?: string): string {
       const shots = output.shots
         .map((s) => `<li><b>0:${String(s.at).padStart(2, '0')}</b> ${esc(s.description)}</li>`)
         .join('')
+      const player = output.url
+        ? `<video src="${esc(output.url)}" controls autoplay playsinline class="poster"></video>`
+        : `<div class="poster" style="background:linear-gradient(140deg, ${esc(output.poster[0])}, ${esc(output.poster[1])})"></div>`
       return page(
         label,
         `<h1>${esc(label)}</h1>
-         <div class="poster" style="background:linear-gradient(140deg, ${esc(output.poster[0])}, ${esc(output.poster[1])})"></div>
+         ${player}
          <p class="sub">${esc(output.resolution)} &middot; ${output.fps} fps &middot; ${esc(output.aspect)}</p>
          <ol>${shots}</ol>`,
       )
@@ -120,7 +125,7 @@ function page(title: string, body: string): string {
   figure { margin:0; } img { width:100%; border-radius:.5rem; display:block; }
   figcaption { font-size:.78rem; opacity:.6; margin-top:.4rem; }
   .ph { aspect-ratio:1; border:1px dashed currentColor; border-radius:.5rem; opacity:.3; }
-  .poster { aspect-ratio:16/9; border-radius:.5rem; margin:1rem 0; }
+  .poster { aspect-ratio:16/9; border-radius:.5rem; margin:1rem 0; width:100%; background:#000; }
   .err { color:#b3311f; } ol { padding-left:1.1rem; } li { margin:.3rem 0; }
 </style></head><body>${body}</body></html>`
 }

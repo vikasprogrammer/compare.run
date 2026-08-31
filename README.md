@@ -37,13 +37,16 @@ blocks its own dev chunks and the page silently fails to hydrate.
   the prompt or the line-up and the difference is recorded on the new run and
   shown as a word-level diff.
 - **Four modalities.** Code (with the generated page rendered live), content,
-  image, and video — video pending a provider that serves it.
+  image, and video (real clips, played inline and downloadable).
+- **Any model the provider carries.** The picker shows a curated shortlist by
+  default and searches the provider's full catalogue behind "More models" —
+  around 400 with OpenRouter connected. No code change to add one.
 
 ## Providers
 
-Bring your own key. One integration ships — OpenRouter, which covers text, code
-and image with a single key. It carries no video models, so that modality is
-visible but unserved until someone adds fal.ai or Replicate.
+Bring your own key. Two integrations ship, and between them they cover all four
+modalities. Neither is required — the app runs with whichever keys you set, and
+says plainly in the header what is connected and what is not.
 
 Adding an integration is one file and one array entry: see
 [PROVIDERS.md](./PROVIDERS.md).
@@ -51,11 +54,17 @@ Adding an integration is one file and one array entry: see
 | Provider | Modalities | Key |
 |---|---|---|
 | OpenRouter | code, content, image | `OPENROUTER_API_KEY` |
+| fal.ai | video | `FAL_KEY` |
+
+**A warning about video.** It is priced per second of output, so a clip costs
+dollars where a text completion costs thousandths of a cent. A three-model video
+comparison is a few dollars per run.
 
 ## Status
 
-Early. The runner works and the comparisons are real; there is no way to record
-a judgement on a result yet, and video has no provider behind it.
+Early. The runner works and the comparisons are real across all four modalities.
+There is still no way to record a judgement on a result — that is the next
+meaningful piece.
 
 ## Stack
 

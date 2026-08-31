@@ -85,52 +85,67 @@ export function VideoView({
   assetBase: string
 }) {
   const [open, setOpen] = useState(false)
-  const empty = output.shots.length === 0
+  const clip = output.url
+  // A hand-written example has a shot list but no file; a failed run has neither.
+  const empty = !clip && output.shots.length === 0
 
   return (
     <div className="space-y-2">
-      <button
-        onClick={() => !empty && setOpen(true)}
-        disabled={empty}
-        className="group relative block aspect-video w-full overflow-hidden rounded-md border disabled:cursor-not-allowed"
-        aria-label={empty ? 'No clip' : `Open ${label} clip`}
-      >
-        <span
-          className="absolute inset-0"
-          style={{ background: `linear-gradient(140deg, ${output.poster[0]}, ${output.poster[1]})` }}
-        />
-        {empty ? (
-          <span className="relative grid h-full place-items-center text-[11px] text-white/70">
-            No clip produced
-          </span>
-        ) : (
-          <>
-            <span className="relative grid h-full place-items-center">
-              <span className="grid size-10 place-items-center rounded-full bg-white/15 ring-1 ring-white/30 backdrop-blur-sm transition group-hover:scale-105 group-hover:bg-white/25">
-                <Play className="size-4 translate-x-px fill-white text-white" />
+      {clip ? (
+        <div className="group relative">
+          {/* A real file gets a real player — the synthetic scrubber below is
+              only for the bundled examples, which have no video behind them. */}
+          <video
+            src={clip}
+            controls
+            playsInline
+            preload="metadata"
+            className="aspect-video w-full rounded-md border bg-black"
+          />
+          <button
+            onClick={() => setOpen(true)}
+            aria-label={`Open ${label} full size`}
+            className="absolute right-1.5 top-1.5 rounded bg-black/45 p-1 opacity-0 backdrop-blur-sm transition group-hover:opacity-100"
+          >
+            <Expand className="size-3 text-white" />
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => !empty && setOpen(true)}
+          disabled={empty}
+          className="group relative block aspect-video w-full overflow-hidden rounded-md border disabled:cursor-not-allowed"
+          aria-label={empty ? 'No clip' : `Open ${label} clip`}
+        >
+          <span
+            className="absolute inset-0"
+            style={{ background: `linear-gradient(140deg, ${output.poster[0]}, ${output.poster[1]})` }}
+          />
+          {empty ? (
+            <span className="relative grid h-full place-items-center text-[11px] text-white/70">
+              No clip produced
+            </span>
+          ) : (
+            <>
+              <span className="relative grid h-full place-items-center">
+                <span className="grid size-10 place-items-center rounded-full bg-white/15 ring-1 ring-white/30 backdrop-blur-sm transition group-hover:scale-105 group-hover:bg-white/25">
+                  <Play className="size-4 translate-x-px fill-white text-white" />
+                </span>
               </span>
-            </span>
-            <span className="absolute right-1.5 top-1.5 rounded bg-black/35 p-1 opacity-0 backdrop-blur-sm transition group-hover:opacity-100">
-              <Expand className="size-3 text-white" />
-            </span>
-            <Scrubber t={0} duration={output.durationSec} pct={0} />
-          </>
-        )}
-      </button>
+              <Scrubber t={0} duration={output.durationSec} pct={0} />
+            </>
+          )}
+        </button>
+      )}
 
-      <div className="flex flex-wrap gap-1">
-        <Chip>{output.resolution}</Chip>
-        <Chip>{output.fps} fps</Chip>
+      <div className="flex flex-wrap items-center gap-1">
+        {output.resolution !== '—' && <Chip>{output.resolution}</Chip>}
+        {output.fps > 0 && <Chip>{output.fps} fps</Chip>}
         <Chip>{output.aspect}</Chip>
-        <DownloadLink
-          href={`${assetBase}/0`}
-          available={Boolean(output.url)}
-          what="clip"
-          className="ml-auto"
-        />
+        <DownloadLink href={`${assetBase}/0`} available={Boolean(clip)} what="clip" className="ml-auto" />
       </div>
 
-      {!empty && (
+      {output.shots.length > 0 && (
         <ol className="space-y-0.5">
           {output.shots.map((shot) => (
             <li key={shot.at} className="flex gap-2 px-1.5 py-1 text-[11.5px] leading-snug text-muted-foreground">
@@ -163,8 +178,8 @@ function VideoLightbox({
 
   // Opening the overlay is the play gesture; it should not need a second click.
   useEffect(() => {
-    if (open) start()
-  }, [open, start])
+    if (open && !output.url) start()
+  }, [open, start, output.url])
 
   const current = [...output.shots].reverse().find((s) => s.at <= t) ?? output.shots[0]
 
@@ -175,6 +190,15 @@ function VideoLightbox({
           <DialogTitle className="text-sm">{label}</DialogTitle>
         </DialogHeader>
 
+        {output.url ? (
+          <video
+            src={output.url}
+            controls
+            autoPlay
+            playsInline
+            className="aspect-video w-full rounded-lg border bg-black"
+          />
+        ) : (
         <button
           onClick={toggle}
           className="group relative block aspect-video w-full overflow-hidden rounded-lg border"
@@ -203,11 +227,12 @@ function VideoLightbox({
           </span>
           <Scrubber t={t} duration={output.durationSec} pct={pct} />
         </button>
+        )}
 
         <div className="flex flex-wrap gap-1.5">
-          <Chip>{output.resolution}</Chip>
-          <Chip>{output.fps} fps</Chip>
+          {output.fps > 0 && <Chip>{output.fps} fps</Chip>}
           <Chip>{output.aspect}</Chip>
+          {output.resolution !== '—' && <Chip>{output.resolution}</Chip>}
           {output.audio && <Chip>{output.audio}</Chip>}
           <DownloadLink href={`${assetBase}/0`} available={Boolean(output.url)} what="clip" className="ml-auto" />
         </div>

@@ -1,14 +1,17 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Check, Sparkles } from 'lucide-react'
+import { Check, Plus, Search, Sparkles, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ModalityIcon } from '@/components/app/bits'
 import { EXPERIMENT_TYPES, modelsFor, templatesFor } from '@/lib/catalog'
+import { Input } from '@/components/ui/input'
+import { displayModel } from '@/lib/model-name'
 import type { LaunchInput, ProviderStatus } from '@/lib/client'
+import type { PickerModel } from '@/app/api/models/route'
 import type { Modality } from '@/lib/types'
 
 /**
@@ -51,6 +54,29 @@ export function QuickRun({
 
   const templates = useMemo(() => templatesFor(type), [type])
   const available = useMemo(() => modelsFor(type), [type])
+
+  const [browsing, setBrowsing] = useState(false)
+  const [query, setQuery] = useState('')
+  const [catalogue, setCatalogue] = useState<PickerModel[] | null>(null)
+
+  // The full list is hundreds of models, so it is fetched only when asked for.
+  useEffect(() => {
+    if (!browsing || catalogue) return
+    fetch('/api/models')
+      .then((r) => r.json())
+      .then((d: { models: PickerModel[] }) => setCatalogue(d.models))
+      .catch(() => setCatalogue([]))
+  }, [browsing, catalogue])
+
+  const matches = useMemo(() => {
+    if (!catalogue) return []
+    const q = query.trim().toLowerCase()
+    return catalogue
+      .filter((m) => m.modalities.includes(type))
+      .filter((m) => !models.includes(m.id))
+      .filter((m) => !q || m.label.toLowerCase().includes(q) || m.id.toLowerCase().includes(q))
+      .slice(0, 40)
+  }, [catalogue, query, type, models])
 
   // Switching what you are making invalidates both the words and the line-up.
   // Opening for a re-run carries the previous run in; changing the modality
@@ -176,6 +202,19 @@ export function QuickRun({
               <span className="text-[11px] text-muted-foreground">{models.length} selected</span>
             </div>
             <div className="flex flex-wrap gap-1">
+              {models
+                .filter((id) => !available.some((m) => m.id === id))
+                .map((id) => (
+                  <button
+                    key={id}
+                    onClick={() => setModels((prev) => prev.filter((x) => x !== id))}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-foreground/25 bg-muted px-2 py-1 text-[11.5px] text-foreground"
+                    title={id}
+                  >
+                    {displayModel(id)}
+                    <X className="size-3 opacity-60" />
+                  </button>
+                ))}
               {available.map((m) => {
                 const on = models.includes(m.id)
                 return (
@@ -194,7 +233,62 @@ export function QuickRun({
                   </button>
                 )
               })}
+              <button
+                onClick={() => setBrowsing((v) => !v)}
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-md border border-dashed px-2 py-1 text-[11.5px] transition',
+                  browsing ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <Plus className="size-3" />
+                More models
+              </button>
             </div>
+
+            {browsing && (
+              <div className="space-y-1.5 rounded-md border bg-muted/20 p-2">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    autoFocus
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder={
+                      catalogue === null
+                        ? 'Loading the provider catalogue…'
+                        : `Search ${catalogue.filter((m) => m.modalities.includes(type)).length} models`
+                    }
+                    className="h-7 pl-7 text-[12px]"
+                  />
+                </div>
+                <div className="max-h-44 overflow-y-auto">
+                  {matches.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => {
+                        setModels((prev) => [...prev, m.id])
+                        setQuery('')
+                      }}
+                      className="flex w-full items-center gap-2 rounded px-1.5 py-1 text-left transition hover:bg-muted"
+                    >
+                      <span className="min-w-0 flex-1 truncate text-[12px]">{m.label}</span>
+                      {m.price && (
+                        <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+                          ${m.price.in.toFixed(2)}/${m.price.out.toFixed(2)}
+                        </span>
+                      )}
+                      <span className="shrink-0 text-[10px] text-muted-foreground">{m.provider}</span>
+                    </button>
+                  ))}
+                  {catalogue !== null && matches.length === 0 && (
+                    <p className="px-1.5 py-2 text-[11.5px] text-muted-foreground">
+                      Nothing matches. Any provider model id also works — the
+                      picker accepts <code className="font-mono">provider::model-id</code>.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-3 border-t pt-3">

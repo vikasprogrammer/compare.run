@@ -1,5 +1,5 @@
 import type { CodeOutput, ContentOutput, ImageOutput, Output } from '../types'
-import type { GenerateRequest, GenerateResult, Provider } from './types'
+import type { GenerateRequest, GenerateResult, Provider, ProviderModel } from './types'
 import type { Modality } from '../types'
 
 /**
@@ -18,6 +18,8 @@ export interface CompatibleOptions {
   requestUsageAccounting?: boolean
   /** OpenRouter needs an explicit opt-in to return images. */
   supportsImageModality?: boolean
+  /** Set when the service exposes GET {baseUrl}/models. */
+  listsModels?: boolean
   headers?: Record<string, string>
 }
 
@@ -31,6 +33,33 @@ const SYSTEM_CONTENT = `You are being compared against other models on an identi
 Respond with the finished piece only - no preamble, no meta-commentary, no markdown fences.
 Open with a single title line, then the body in paragraphs separated by blank lines.
 Use "## " to start a section heading.`
+
+interface RemoteModel {
+  id: string
+  name?: string
+  architecture?: { output_modalities?: string[] }
+  pricing?: { prompt?: string; completion?: string }
+}
+
+/**
+ * Maps a provider's own listing onto our modalities. Text output covers both
+ * code and prose; anything that can emit an image gets the image modality too.
+ */
+function toProviderModel(m: RemoteModel): ProviderModel {
+  const out = m.architecture?.output_modalities ?? ['text']
+  const modalities: Modality[] = []
+  if (out.includes('text')) modalities.push('code', 'content')
+  if (out.includes('image')) modalities.push('image')
+
+  const inPrice = Number(m.pricing?.prompt ?? 0) * 1e6
+  const outPrice = Number(m.pricing?.completion ?? 0) * 1e6
+  return {
+    id: m.id,
+    label: m.name ?? m.id,
+    modalities,
+    ...(inPrice > 0 || outPrice > 0 ? { price: { in: inPrice, out: outPrice } } : {}),
+  }
+}
 
 interface ChatResponse {
   choices?: {
@@ -88,6 +117,21 @@ export function createCompatibleProvider(opts: CompatibleOptions): Provider {
     isConfigured() {
       return Boolean(process.env[opts.keyEnvVar])
     },
+
+    ...(opts.listsModels
+      ? {
+          async listModels(): Promise<ProviderModel[]> {
+            const key = process.env[opts.keyEnvVar]
+            if (!key) return []
+            const res = await fetch(`${opts.baseUrl}/models`, {
+              headers: { authorization: `Bearer ${key}`, ...opts.headers },
+            })
+            if (!res.ok) return []
+            const body = (await res.json()) as { data?: RemoteModel[] }
+            return (body.data ?? []).map(toProviderModel).filter((m) => m.modalities.length > 0)
+          },
+        }
+      : {}),
 
     async generate(req: GenerateRequest): Promise<GenerateResult> {
       const key = process.env[opts.keyEnvVar]
@@ -264,14 +308,19 @@ function toContentOutput(text: string): ContentOutput {
   flush()
 
   const words = clean.split(/\s+/).filter(Boolean).length
+
+  // The opening paragraph becomes the deck, so it must always be lifted out of
+  // the body — otherwise a single-paragraph piece renders twice.
   const deck = sections[0]?.paragraphs[0] ?? ''
-  if (sections[0] && sections[0].paragraphs.length > 1) {
+  if (sections[0]) {
     sections[0] = { ...sections[0], paragraphs: sections[0].paragraphs.slice(1) }
+    if (!sections[0].heading && sections[0].paragraphs.length === 0) sections.shift()
   }
 
+  const count = sections.length || 1
   return {
     kind: 'content',
-    summary: `${words} words across ${sections.length || 1} section${sections.length === 1 ? '' : 's'}.`,
+    summary: `${words} words across ${count} section${count === 1 ? '' : 's'}.`,
     title,
     deck,
     sections: sections.length ? sections : [{ heading: null, paragraphs: [clean] }],

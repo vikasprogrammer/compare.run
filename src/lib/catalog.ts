@@ -39,7 +39,7 @@ function m(
   }
 }
 
-/** Video models, pending a provider integration that can actually run them. */
+/** Video models, all served through the fal.ai queue API. */
 function v(id: string, label: string, provider: string, providerModel: string, note: string): Model {
   return { id, label, provider, providerId: 'fal', providerModel, modalities: ['video'], note }
 }
@@ -65,13 +65,15 @@ export const MODELS: Model[] = [
   m('gpt-5-image', 'GPT Image', 'OpenAI', 'openai/gpt-5-image', ['image'], 'Instruction following'),
   m('gpt-5.4-image-2', 'GPT Image 2', 'OpenAI', 'openai/gpt-5.4-image-2', ['image'], 'Newer image model'),
 
-  // Video: no shipped integration serves these yet. They are listed so the gap
-  // is visible in the UI rather than silently absent — adding a fal.ai or
-  // Replicate provider to the registry is what lights the modality up.
-  v('veo-3', 'Veo 3', 'Google', 'fal-ai/veo3', 'Native audio, long shots'),
-  v('sora-2', 'Sora 2', 'OpenAI', 'fal-ai/sora-2', 'Physical consistency'),
-  v('runway-gen4', 'Runway Gen-4', 'Runway', 'fal-ai/runway-gen4/turbo', 'Fine motion control'),
-  v('kling-2-5', 'Kling 2.5', 'Kuaishou', 'fal-ai/kling-video/v2.5', 'Fast and inexpensive'),
+  // Video, through fal.ai. Every id below was verified against fal's queue API.
+  v('veo-3', 'Veo 3', 'Google', 'fal-ai/veo3', 'Native audio, strong prompt adherence'),
+  v('veo-3-fast', 'Veo 3 Fast', 'Google', 'fal-ai/veo3/fast', 'Cheaper, quicker Veo'),
+  v('sora-2', 'Sora 2', 'OpenAI', 'fal-ai/sora-2/text-to-video', 'Physical consistency'),
+  v('kling-2-5-turbo', 'Kling 2.5 Turbo', 'Kuaishou', 'fal-ai/kling-video/v2.5-turbo/pro/text-to-video', 'Fast and inexpensive'),
+  v('kling-2-master', 'Kling 2 Master', 'Kuaishou', 'fal-ai/kling-video/v2/master/text-to-video', 'Higher fidelity Kling'),
+  v('hailuo-02', 'Hailuo 02', 'MiniMax', 'fal-ai/minimax/hailuo-02/standard/text-to-video', 'Good motion, low cost'),
+  v('wan-t2v', 'Wan T2V', 'Alibaba', 'fal-ai/wan-t2v', 'Open weight video'),
+  v('ltx-video', 'LTX Video', 'Lightricks', 'fal-ai/ltx-video', 'Cheapest and fastest'),
 ]
 
 export const PROMPT_TEMPLATES: PromptTemplate[] = [

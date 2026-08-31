@@ -1,4 +1,5 @@
 import { modelById } from './catalog'
+import { displayModel } from './model-name'
 import { formatDuration, formatUsd } from './format'
 import type { Run } from './types'
 
@@ -22,7 +23,7 @@ export function runSummary(run: Run): string {
   const judged = done.filter((r) => r.score !== null)
   if (!judged.length) return `${done.length} complete, not judged`
   const best = judged.reduce((a, b) => ((b.score ?? 0) > (a.score ?? 0) ? b : a))
-  return `Best ${best.score}/5 — ${modelById(best.modelId)?.label ?? best.modelId}`
+  return `Best ${best.score}/5 — ${displayModel(best.modelId)}`
 }
 
 export function isRunActive(run: Run): boolean {

@@ -126,15 +126,20 @@ async function execute(runId: string, run: Run, modelId: string): Promise<void> 
     })
   }
 
-  if (!model) return fail(`Unknown model "${modelId}"`)
-
   const experiment = getExperiment(run.experimentId)
   if (!experiment) return fail('Experiment disappeared mid-run')
 
-  const provider = providersFor(experiment.type).find((p) => p.id === model.providerId)
+  // A model is either in the curated catalogue, or an ad-hoc id the picker
+  // built as "providerId::providerModel" from a provider's own listing.
+  const resolved = model
+    ? { providerId: model.providerId, providerModel: model.providerModel, label: model.label }
+    : parseAdHoc(modelId)
+  if (!resolved) return fail(`Unknown model "${modelId}"`)
+
+  const provider = providersFor(experiment.type).find((p) => p.id === resolved.providerId)
   if (!provider) {
     return fail(
-      `No configured provider can run ${model.label}. Set ${model.providerId.toUpperCase()}_API_KEY and restart.`,
+      `No configured provider can run ${resolved.label}. Set the provider's API key and restart.`,
     )
   }
 
@@ -143,10 +148,11 @@ async function execute(runId: string, run: Run, modelId: string): Promise<void> 
   try {
     const result = await provider.generate({
       modelId,
-      providerModel: model.providerModel,
+      providerModel: resolved.providerModel,
       modality: experiment.type,
       prompt: run.prompt,
-      signal: AbortSignal.timeout(1000 * 60 * 5),
+      // Video generation is minutes, not seconds.
+      signal: AbortSignal.timeout(1000 * 60 * (experiment.type === 'video' ? 15 : 5)),
     })
     saveResult(runId, {
       ...base,
@@ -160,4 +166,14 @@ async function execute(runId: string, run: Run, modelId: string): Promise<void> 
   } catch (err) {
     fail(err instanceof Error ? err.message : String(err))
   }
+}
+
+/** "openrouter::anthropic/claude-opus-4.8" -> provider and wire identifier. */
+function parseAdHoc(modelId: string): { providerId: string; providerModel: string; label: string } | null {
+  const at = modelId.indexOf('::')
+  if (at === -1) return null
+  const providerId = modelId.slice(0, at)
+  const providerModel = modelId.slice(at + 2)
+  if (!providerId || !providerModel) return null
+  return { providerId, providerModel, label: providerModel }
 }

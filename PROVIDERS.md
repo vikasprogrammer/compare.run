@@ -40,19 +40,29 @@ createCompatibleProvider({
 })
 ```
 
-Two optional flags cover the common divergences: `requestUsageAccounting` (send
-`usage: {include: true}` and read real spend back — OpenRouter does this) and
-`supportsImageModality` (send `modalities: ['image','text']`).
+Three optional flags cover the common divergences: `requestUsageAccounting`
+(send `usage: {include: true}` and read real spend back — OpenRouter does this),
+`supportsImageModality` (send `modalities: ['image','text']`), and `listsModels`
+(the service exposes `GET {baseUrl}/models`, so the picker can offer its whole
+catalogue rather than only the curated shortlist).
 
 The factory already handles retry-with-backoff on 429/5xx, JSON-mode code output,
 and unwrapping models that ignore the response contract.
 
 ## If it does not
 
-Implement `Provider` directly. A video house — fal.ai, Replicate — submits a job
-and polls for a result, so `generate` becomes submit-then-poll against the signal.
-Return a `VideoOutput` with a poster and a shot list and the existing player
-renders it.
+Implement `Provider` directly. `src/lib/providers/fal.ts` is the worked example:
+fal.ai enqueues a job and returns status, response and cancel URLs, so `generate`
+submits, polls the status URL, then collects from the response URL — cancelling
+upstream if the run is abandoned. Return a `VideoOutput` carrying `url` and the
+UI plays the real file.
+
+### Optional: publish your catalogue
+
+Implement `listModels()` and every model you serve appears in the picker's search,
+with pricing when you publish it. Providers without a list endpoint (fal.ai) skip
+it; those models are reached by their curated entry or by a raw
+`providerId::model-id`.
 
 ## Then
 
@@ -67,11 +77,11 @@ still unserved says so in plain words rather than failing silently.
 
 ## Currently shipped
 
-| Provider | Modalities | Key |
-|---|---|---|
-| OpenRouter | code, content, image | `OPENROUTER_API_KEY` |
+| Provider | Modalities | Key | Lists models |
+|---|---|---|---|
+| OpenRouter | code, content, image | `OPENROUTER_API_KEY` | yes (~400) |
+| fal.ai | video | `FAL_KEY` | no |
 
-**Video is unserved.** OpenRouter carries no video models, so Veo, Sora, Runway
-and Kling are listed in the catalog but bound to a `fal` provider that does not
-exist yet. That gap is deliberate and visible — it is the first integration
-worth contributing.
+Neither key is required. Whatever is missing is reported in the app's
+Connections panel, and any modality no connected provider can serve says so
+rather than failing silently.

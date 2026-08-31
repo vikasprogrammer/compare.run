@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ImageView, VideoView } from '@/components/app/media'
 import { ScoreDots, StatusPill } from '@/components/app/bits'
 import { modelById } from '@/lib/catalog'
+import { displayModel, displayProvider } from '@/lib/model-name'
 import { formatDuration, formatUsd } from '@/lib/format'
 import type { CodeOutput, ContentOutput, HtmlPreview, Modality, Output, PreviewSpec, Result, Run, SpecPreview } from '@/lib/types'
 
@@ -46,8 +47,10 @@ function ResultCard({
     <article className="flex flex-col overflow-hidden rounded-lg border bg-card">
       <header className="flex items-center gap-2 border-b px-3 py-2">
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-medium leading-tight">{model?.label}</div>
-          <div className="truncate text-[11px] text-muted-foreground">{model?.provider}</div>
+          <div className="truncate text-[13px] font-medium leading-tight" title={result.modelId}>
+            {displayModel(result.modelId)}
+          </div>
+          <div className="truncate text-[11px] text-muted-foreground">{displayProvider(result.modelId)}</div>
         </div>
         {result.status === 'complete' ? (
           <ScoreDots score={result.score} />
@@ -98,7 +101,7 @@ function ResultCard({
         ) : (
           <OutputView
             output={result.output}
-            label={model?.label ?? result.modelId}
+            label={displayModel(result.modelId)}
             assetBase={`/api/output/${runId}/${encodeURIComponent(result.modelId)}/asset`}
           />
         )}

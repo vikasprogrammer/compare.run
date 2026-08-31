@@ -32,4 +32,20 @@ export interface Provider {
   docsUrl: string
   isConfigured(): boolean
   generate(req: GenerateRequest): Promise<GenerateResult>
+  /**
+   * Every model this provider can reach, if it publishes a list. Lets the
+   * picker offer the long tail without anyone editing the curated catalogue.
+   * Providers with no list endpoint (fal.ai) simply omit this, and the picker
+   * falls back to accepting a raw model id.
+   */
+  listModels?(): Promise<ProviderModel[]>
+}
+
+export interface ProviderModel {
+  /** The identifier this provider expects on the wire. */
+  id: string
+  label: string
+  modalities: Modality[]
+  /** USD per million tokens, when the provider publishes it. */
+  price?: { in: number; out: number }
 }

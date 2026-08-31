@@ -36,7 +36,7 @@ export const EXAMPLE_EXPERIMENTS: Experiment[] = [
     templateId: 'tpl-product-spot',
     prompt:
       'A fifteen-second spot for a time-tracking app. Open on a cluttered desk at dusk, push in slowly on a laptop showing a clean weekly timesheet, then pull back to reveal the desk now tidy and the room dark except for one lamp. Warm, unhurried, no on-screen text, no people speaking.',
-    modelIds: ['veo-3', 'sora-2', 'runway-gen4', 'kling-2-5'],
+    modelIds: ['veo-3', 'sora-2', 'hailuo-02', 'kling-2-5-turbo'],
     createdAt: '2026-08-24T14:30:00Z',
     updatedAt: '2026-08-27T08:05:00Z',
   },
@@ -632,7 +632,7 @@ const MEDIA_RUNS: SeedRun[] = [
         },
       },
       {
-        modelId: 'runway-gen4',
+        modelId: 'hailuo-02',
         status: 'running',
         durationSec: 96,
         costUsd: null,
@@ -655,7 +655,7 @@ const MEDIA_RUNS: SeedRun[] = [
         },
       },
       {
-        modelId: 'kling-2-5',
+        modelId: 'kling-2-5-turbo',
         status: 'failed',
         durationSec: 12,
         costUsd: 0,
@@ -735,7 +735,7 @@ const MEDIA_RUNS: SeedRun[] = [
         },
       },
       {
-        modelId: 'runway-gen4',
+        modelId: 'hailuo-02',
         status: 'complete',
         durationSec: 176,
         costUsd: 0.9,
