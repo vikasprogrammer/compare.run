@@ -15,16 +15,29 @@ $0.03. An 18x cost spread and an 8x time spread on the same prompt — and three
 pages that look nothing like each other. Those previews are the pages the models
 actually wrote, rendered in sandboxed iframes.*
 
-## Running it
+## Deploy your own
+
+[![Deploy to InstaPods](https://instapods.com/deploy-button.svg)](https://app.instapods.com/dashboard/pods/create?repo=https://github.com/vikasprogrammer/compare.run)
+
+One click puts it on a real server with HTTPS. The wizard asks for the two API
+keys below — both optional, and whichever you skip simply shows as not connected.
+
+**Pick Node 24** in the create wizard. The default is 22, and this app stores
+runs in SQLite through `node:sqlite`, which 22 does not have.
+
+## Running it locally
 
 ```bash
 npm install
-cp .env.local.example .env.local   # add an OPENROUTER_API_KEY
+cp .env.example .env.local   # add an OPENROUTER_API_KEY
 npm run dev
 ```
 
 Then open **http://localhost:4320** — use `localhost`, not `127.0.0.1`, or Next
 blocks its own dev chunks and the page silently fails to hydrate.
+
+Requires **Node 24**: runs are stored in SQLite via the built-in `node:sqlite`,
+so there is no database server and no native module to compile.
 
 ## What it does
 
@@ -69,7 +82,7 @@ meaningful piece.
 ## Stack
 
 Next.js App Router, Tailwind, shadcn/ui, and SQLite via `node:sqlite` — no
-database server and no native module. Requires Node 24.
+database server and no native module.
 
 ## Licence
 
