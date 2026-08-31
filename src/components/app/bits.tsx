@@ -33,11 +33,13 @@ export function StatusPill({ status, className }: { status: RunStatus; className
   )
 }
 
-/** Five dots, filled to the reviewer's score. Null score reads as "not judged". */
+/**
+ * Five dots, filled to the reviewer's score. Renders nothing when there is no
+ * score: there is no way to record one yet, so a placeholder would advertise a
+ * feature that does not exist.
+ */
 export function ScoreDots({ score }: { score: number | null }) {
-  if (score === null) {
-    return <span className="text-xs text-muted-foreground">Not judged</span>
-  }
+  if (score === null) return null
   const tone = score >= 4 ? 'bg-score-good' : score >= 3 ? 'bg-score-mid' : 'bg-score-bad'
   return (
     <span className="inline-flex items-center gap-1" title={`Scored ${score} of 5`}>
