@@ -18,7 +18,7 @@ import {
   rerun,
   type AppState,
   type LaunchInput,
-  type PickerModel,
+  type Catalogue,
 } from '@/lib/client'
 import { isRunActive, runSummary, runTotals } from '@/lib/summary'
 import { formatDateTime, relativeTime } from '@/lib/format'
@@ -29,7 +29,7 @@ export default function Page() {
   const [runId, setRunId] = useState('')
   const [composerOpen, setComposerOpen] = useState(false)
   const [seed, setSeed] = useState<RerunSeed | null>(null)
-  const [models, setModels] = useState<PickerModel[] | null>(null)
+  const [catalogue, setCatalogue] = useState<Catalogue | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const didRestore = useRef(false)
@@ -44,7 +44,9 @@ export default function Page() {
     load().catch(() => setError('Could not reach the server.'))
     // Warmed in the background: the catalogue is a live fan-out across every
     // connected provider, so paying for it when the picker opens is a stall.
-    fetchModels().then(setModels).catch(() => setModels([]))
+    fetchModels()
+      .then(setCatalogue)
+      .catch(() => setCatalogue({ models: [], recent: [] }))
   }, [load])
 
   const experiments = state?.experiments ?? []
@@ -56,8 +58,8 @@ export default function Page() {
   const run = runs.find((r) => r.id === runId) ?? runs[0]
   const previous = run ? runs.find((r) => r.seq < run.seq) : undefined
   const modelLabels = useMemo(
-    () => new Map((models ?? []).map((m) => [m.id, m.label])),
-    [models],
+    () => new Map((catalogue?.models ?? []).map((m) => [m.id, m.label])),
+    [catalogue],
   )
 
   // Settle on a selection once data arrives, honouring a deep link if present.
@@ -333,7 +335,7 @@ export default function Page() {
         onRerun={doRerun}
         seed={seed}
         unsupported={state?.unsupported ?? []}
-        catalogue={models}
+        catalogue={catalogue}
       />
     </div>
   )

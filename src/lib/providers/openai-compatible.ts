@@ -284,8 +284,15 @@ function guessLanguage(path: string): string {
 function toContentOutput(text: string): ContentOutput {
   const clean = text.replace(/^```[\w]*\n?/, '').replace(/```$/, '').trim()
   const lines = clean.split('\n')
-  const title = (lines[0] ?? '').replace(/^#+\s*/, '').trim() || 'Untitled'
+  const firstLine = (lines[0] ?? '').replace(/^#+\s*/, '').trim()
   const rest = lines.slice(1).join('\n').trim()
+
+  // Only treat the opening line as a title when it reads like one: short, and
+  // with a body after it. A model that answers in a single paragraph has no
+  // title, and taking its whole answer as one renders the text twice.
+  const isTitle = firstLine.length > 0 && firstLine.length <= 100 && rest.length > 0
+  const title = isTitle ? firstLine : ''
+  const body = isTitle ? rest : clean
 
   const sections: ContentOutput['sections'] = []
   let heading: string | null = null
@@ -295,7 +302,7 @@ function toContentOutput(text: string): ContentOutput {
     paragraphs = []
   }
 
-  for (const block of rest.split(/\n{2,}/)) {
+  for (const block of body.split(/\n{2,}/)) {
     const b = block.trim()
     if (!b) continue
     if (/^#{2,}\s/.test(b)) {

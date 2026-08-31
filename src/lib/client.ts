@@ -34,10 +34,16 @@ export interface PickerModel {
   curated: boolean
 }
 
-export async function fetchModels(): Promise<PickerModel[]> {
+export interface Catalogue {
+  models: PickerModel[]
+  /** Model ids used in recent runs, newest first. */
+  recent: string[]
+}
+
+export async function fetchModels(): Promise<Catalogue> {
   const res = await fetch('/api/models', { cache: 'no-store' })
-  if (!res.ok) return []
-  return ((await res.json()) as { models: PickerModel[] }).models
+  if (!res.ok) return { models: [], recent: [] }
+  return (await res.json()) as Catalogue
 }
 
 export async function fetchRun(id: string): Promise<Run | null> {

@@ -362,8 +362,10 @@ function ContentView({ output }: { output: ContentOutput }) {
       </div>
       <ScrollArea className="h-44 rounded-md border bg-muted/20">
         <div className="space-y-2 p-2.5">
-          <h4 className="text-[13px] font-semibold leading-snug tracking-tight">{output.title}</h4>
-          <p className="text-[11.5px] leading-relaxed text-muted-foreground">{output.deck}</p>
+          {output.title && (
+            <h4 className="text-[13px] font-semibold leading-snug tracking-tight">{output.title}</h4>
+          )}
+          {output.deck && <p className="text-[11.5px] leading-relaxed text-muted-foreground">{output.deck}</p>}
           {output.sections.map((s, i) => (
             <div key={i} className="space-y-1">
               {s.heading && <h5 className="text-[11.5px] font-semibold">{s.heading}</h5>}

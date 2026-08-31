@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { MODELS } from '@/lib/catalog'
+import { recentModelIds } from '@/lib/db'
 import { PROVIDERS } from '@/lib/providers'
 /** What the picker submits. Ad-hoc models use "providerId::providerModel". */
 import type { PickerModel } from '@/lib/client'
@@ -14,7 +15,7 @@ const g = globalThis as unknown as { __pgModels?: { at: number; value: PickerMod
 export async function GET() {
   const cached = g.__pgModels
   if (cached && Date.now() - cached.at < CACHE_MS) {
-    return NextResponse.json({ models: cached.value })
+    return NextResponse.json({ models: cached.value, recent: recentModelIds() })
   }
 
   const curated: PickerModel[] = MODELS.map((m) => ({
@@ -56,5 +57,6 @@ export async function GET() {
 
   const models = [...curated, ...extra.sort((a, b) => a.label.localeCompare(b.label))]
   g.__pgModels = { at: Date.now(), value: models }
-  return NextResponse.json({ models })
+  // Recency is read fresh: it changes with every run, unlike the catalogue.
+  return NextResponse.json({ models, recent: recentModelIds() })
 }

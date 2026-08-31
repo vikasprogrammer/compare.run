@@ -71,7 +71,7 @@ function render(output: Output, label: string, error?: string): string {
         .join('')
       return page(
         label,
-        `<h1>${esc(output.title)}</h1><p class="deck">${esc(output.deck)}</p>${body}
+        `${output.title ? `<h1>${esc(output.title)}</h1>` : ''}${output.deck ? `<p class="deck">${esc(output.deck)}</p>` : ''}${body}
          <p class="sub">${output.wordCount} words &middot; ${esc(label)}</p>`,
       )
     }

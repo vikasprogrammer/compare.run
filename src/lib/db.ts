@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite'
 import fs from 'node:fs'
 import path from 'node:path'
 import { EXAMPLE_EXPERIMENTS, EXAMPLE_RUNS } from './examples'
-import type { Experiment, Modality, Output, Result, Run, RunStatus } from './types'
+import type { ContentOutput, Experiment, Modality, Output, Result, Run, RunStatus } from './types'
 
 const DIR = path.join(process.cwd(), '.data')
 const DB_PATH = path.join(DIR, 'compare-run.db')
@@ -46,10 +46,12 @@ function open(): DatabaseSync {
       PRIMARY KEY (run_id, model_id)
     );
     CREATE INDEX IF NOT EXISTS idx_runs_exp ON runs (experiment_id);
+    CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
   `)
   migrate(db)
   g.__pgDb = db
   seed(db)
+  repairDuplicatedProse(db)
   return db
 }
 
@@ -67,6 +69,65 @@ function migrate(db: DatabaseSync): void {
       prompt = COALESCE((SELECT prompt FROM experiments e WHERE e.id = runs.experiment_id), ''),
       model_ids = COALESCE((SELECT model_ids FROM experiments e WHERE e.id = runs.experiment_id), '[]')`)
   }
+}
+
+/**
+ * Early versions of the prose parser rendered text twice: it took a
+ * single-paragraph answer as the title and then repeated it as the body, and it
+ * left the deck paragraph in the body as well. New runs are parsed correctly;
+ * this repairs what was already stored rather than leaving old runs misreported.
+ */
+function repairDuplicatedProse(db: DatabaseSync): void {
+  const done = db.prepare("SELECT value FROM meta WHERE key = 'prose_repair_v1'").get()
+  if (done) return
+
+  const rows = db.prepare('SELECT run_id, model_id, output FROM results').all() as Row[]
+  const update = db.prepare('UPDATE results SET output = ? WHERE run_id = ? AND model_id = ?')
+  let repaired = 0
+
+  for (const row of rows) {
+    let output: ContentOutput
+    try {
+      output = JSON.parse(row.output as string) as ContentOutput
+    } catch {
+      continue
+    }
+    if (output?.kind !== 'content' || !Array.isArray(output.sections)) continue
+
+    const sections = output.sections.map((s) => ({ ...s, paragraphs: [...s.paragraphs] }))
+    let changed = false
+
+    // The deck was lifted from the body but never removed from it.
+    if (output.deck && sections[0]?.paragraphs[0] === output.deck) {
+      sections[0].paragraphs.shift()
+      changed = true
+    }
+    // The whole answer was taken as the title and repeated below it.
+    if (output.title && sections[0]?.paragraphs[0] === output.title) {
+      sections[0].paragraphs.shift()
+      changed = true
+    }
+    if (output.title && output.title.length > 100) {
+      output.title = ''
+      changed = true
+    }
+    if (!changed) continue
+
+    if (sections[0] && !sections[0].heading && sections[0].paragraphs.length === 0) sections.shift()
+    const count = sections.length || 1
+    update.run(
+      JSON.stringify({
+        ...output,
+        sections,
+        summary: `${output.wordCount} words across ${count} section${count === 1 ? '' : 's'}.`,
+      }),
+      row.run_id as string,
+      row.model_id as string,
+    )
+    repaired++
+  }
+
+  db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('prose_repair_v1', ?)").run(String(repaired))
 }
 
 /** The bundled examples become real rows on first boot, so the app is never empty. */
@@ -216,4 +277,22 @@ export function reconcile(): void {
   db.prepare("UPDATE results SET status='failed', error='Interrupted by a server restart' WHERE status IN ('running','queued')").run()
   db.prepare("UPDATE runs SET status='complete' WHERE status IN ('running','queued')").run()
   void now
+}
+
+/**
+ * Models used in recent runs that are not in the curated shortlist. Reaching
+ * for one from the full catalogue once should be enough — it stays on the
+ * picker afterwards rather than making you search for it again.
+ */
+export function recentModelIds(limit = 12): string[] {
+  const rows = db
+    .prepare(
+      `SELECT results.model_id AS id, MAX(runs.started_at) AS last_used
+       FROM results JOIN runs ON runs.id = results.run_id
+       GROUP BY results.model_id
+       ORDER BY last_used DESC
+       LIMIT ?`,
+    )
+    .all(limit * 3) as Row[]
+  return rows.map((r) => r.id as string).slice(0, limit)
 }

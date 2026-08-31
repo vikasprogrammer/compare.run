@@ -10,7 +10,7 @@ import { ModalityIcon } from '@/components/app/bits'
 import { EXPERIMENT_TYPES, modelsFor, templatesFor } from '@/lib/catalog'
 import { Input } from '@/components/ui/input'
 import { displayModel } from '@/lib/model-name'
-import type { LaunchInput, PickerModel } from '@/lib/client'
+import type { Catalogue, LaunchInput } from '@/lib/client'
 
 import type { Modality } from '@/lib/types'
 
@@ -45,7 +45,7 @@ export function QuickRun({
   /** Modalities no configured provider can serve. */
   unsupported: Modality[]
   /** Prefetched on app load; null until it lands. */
-  catalogue: PickerModel[] | null
+  catalogue: Catalogue | null
 }) {
   const [type, setType] = useState<Modality>('code')
   const [prompt, setPrompt] = useState('')
@@ -59,18 +59,33 @@ export function QuickRun({
   const [browsing, setBrowsing] = useState(false)
   const [query, setQuery] = useState('')
 
+  const all = catalogue?.models
   // The catalogue carries a proper display name; the wire id is a last resort.
-  const labelOf = (id: string) => catalogue?.find((m) => m.id === id)?.label ?? displayModel(id)
+  const labelOf = (id: string) => all?.find((m) => m.id === id)?.label ?? displayModel(id)
+
+  /**
+   * The shortlist is the curated set plus anything reached for recently. Going
+   * to the full catalogue for a model once should be enough; after that it sits
+   * on the picker like any other.
+   */
+  const shortlist = useMemo(() => {
+    const ids = new Set(available.map((m) => m.id))
+    const remembered = (catalogue?.recent ?? [])
+      .filter((id) => !ids.has(id))
+      .map((id) => all?.find((m) => m.id === id))
+      .filter((m): m is NonNullable<typeof m> => Boolean(m) && m!.modalities.includes(type))
+    return [...available, ...remembered]
+  }, [available, catalogue, all, type])
 
   const matches = useMemo(() => {
-    if (!catalogue) return []
+    if (!all) return []
     const q = query.trim().toLowerCase()
-    return catalogue
+    return all
       .filter((m) => m.modalities.includes(type))
       .filter((m) => !models.includes(m.id))
       .filter((m) => !q || m.label.toLowerCase().includes(q) || m.id.toLowerCase().includes(q))
       .slice(0, 40)
-  }, [catalogue, query, type, models])
+  }, [all, query, type, models])
 
   // Switching what you are making invalidates both the words and the line-up.
   // Opening for a re-run carries the previous run in; changing the modality
@@ -207,7 +222,7 @@ export function QuickRun({
             </div>
             <div className="flex flex-wrap gap-1">
               {models
-                .filter((id) => !available.some((m) => m.id === id))
+                .filter((id) => !shortlist.some((m) => m.id === id))
                 .map((id) => (
                   <button
                     key={id}
@@ -219,7 +234,7 @@ export function QuickRun({
                     <X className="size-3 opacity-60" />
                   </button>
                 ))}
-              {available.map((m) => {
+              {shortlist.map((m) => {
                 const on = models.includes(m.id)
                 return (
                   <button
@@ -258,9 +273,9 @@ export function QuickRun({
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder={
-                      catalogue === null
+                      all === undefined || all === null
                         ? 'Loading the provider catalogue…'
-                        : `Search ${catalogue.filter((m) => m.modalities.includes(type)).length} models`
+                        : `Search ${all.filter((m) => m.modalities.includes(type)).length} models`
                     }
                     className="h-7 pl-7 text-[12px]"
                   />
@@ -284,7 +299,7 @@ export function QuickRun({
                       <span className="shrink-0 text-[10px] text-muted-foreground">{m.provider}</span>
                     </button>
                   ))}
-                  {catalogue !== null && matches.length === 0 && (
+                  {all && matches.length === 0 && (
                     <p className="px-1.5 py-2 text-[11.5px] text-muted-foreground">
                       Nothing matches. Any provider model id also works — the
                       picker accepts <code className="font-mono">provider::model-id</code>.
