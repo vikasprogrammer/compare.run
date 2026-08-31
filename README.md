@@ -7,6 +7,14 @@ The thesis: a screenshot of two chat windows is not a comparison. Holding the
 prompt fixed, running it against several models at once, and keeping the history
 is.
 
+![compare.run comparing three models on one landing-page brief](docs/screenshot.png)
+
+*One brief, three models, live output. Claude Haiku 4.5 finished in 19s for
+$0.02; DeepSeek V3.2 took 2m 42s for $0.0019; Gemini 3.7 Flash took 1m 23s for
+$0.03. An 18x cost spread and an 8x time spread on the same prompt — and three
+pages that look nothing like each other. Those previews are the pages the models
+actually wrote, rendered in sandboxed iframes.*
+
 ## Running it
 
 ```bash
