@@ -39,6 +39,7 @@ interface RemoteModel {
   name?: string
   architecture?: { output_modalities?: string[] }
   pricing?: { prompt?: string; completion?: string }
+  supported_parameters?: string[]
 }
 
 /**
@@ -57,6 +58,7 @@ function toProviderModel(m: RemoteModel): ProviderModel {
     id: m.id,
     label: m.name ?? m.id,
     modalities,
+    reasoning: (m.supported_parameters ?? []).includes('reasoning'),
     ...(inPrice > 0 || outPrice > 0 ? { price: { in: inPrice, out: outPrice } } : {}),
   }
 }
@@ -150,6 +152,9 @@ export function createCompatibleProvider(opts: CompatibleOptions): Provider {
             ],
       }
       if (opts.requestUsageAccounting) body.usage = { include: true }
+      // Only sent when asked for: omitting it leaves the model's own default,
+      // which is not the same as any particular level.
+      if (req.effort) body.reasoning = { effort: req.effort }
       if (isImage && opts.supportsImageModality) body.modalities = ['image', 'text']
       if (req.modality === 'code') body.response_format = { type: 'json_object' }
 

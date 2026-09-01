@@ -1,5 +1,5 @@
 import { getRun } from '@/lib/db'
-import { displayModel } from '@/lib/model-name'
+import { displayEntry } from '@/lib/model-id'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,7 +39,7 @@ export async function GET(
     )
   }
 
-  const slug = displayModel(result.modelId)
+  const slug = displayEntry(result.modelId)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')

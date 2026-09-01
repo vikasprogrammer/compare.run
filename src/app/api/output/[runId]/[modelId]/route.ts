@@ -1,5 +1,5 @@
 import { getRun } from '@/lib/db'
-import { displayModel } from '@/lib/model-name'
+import { displayEntry } from '@/lib/model-id'
 import type { Output } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -21,7 +21,7 @@ export async function GET(
   const result = run.results.find((r) => r.modelId === decodeURIComponent(modelId))
   if (!result) return new Response('Result not found', { status: 404 })
 
-  const label = displayModel(result.modelId)
+  const label = displayEntry(result.modelId)
   const html = render(result.output, label, result.error)
   const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 

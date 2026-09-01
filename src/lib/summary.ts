@@ -1,4 +1,4 @@
-import { displayModel } from './model-name'
+import { displayEntry } from './model-id'
 import { formatDuration, formatUsd } from './format'
 import type { Run } from './types'
 

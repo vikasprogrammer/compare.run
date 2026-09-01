@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { ModalityIcon } from '@/components/app/bits'
 import { EXPERIMENT_TYPES, modelsFor, templatesFor } from '@/lib/catalog'
 import { Input } from '@/components/ui/input'
-import { displayModel } from '@/lib/model-name'
+import { buildEntry, displayEntry, parseEntry } from '@/lib/model-id'
 import type { Catalogue, LaunchInput } from '@/lib/client'
 
 import type { Modality } from '@/lib/types'
@@ -61,7 +61,27 @@ export function QuickRun({
 
   const all = catalogue?.models
   // The catalogue carries a proper display name; the wire id is a last resort.
-  const labelOf = (id: string) => all?.find((m) => m.id === id)?.label ?? displayModel(id)
+  const labelMap = useMemo(() => new Map((all ?? []).map((m) => [m.id, m.label])), [all])
+  const labelOf = (entry: string) => displayEntry(entry, labelMap)
+  const selectedModelIds = useMemo(() => models.map((e) => parseEntry(e).modelId), [models])
+
+  /** Selected models that accept a reasoning effort, with their current one. */
+  const reasoningRows = useMemo(
+    () =>
+      models
+        .map((entry) => {
+          const { modelId, effort } = parseEntry(entry)
+          const model = all?.find((m) => m.id === modelId)
+          return model?.reasoning ? { entry, modelId, effort, label: model.label } : null
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null),
+    [models, all],
+  )
+
+  const setEffort = (entry: string, effort: string | null) => {
+    const { modelId } = parseEntry(entry)
+    setModels((prev) => prev.map((e) => (e === entry ? buildEntry(modelId, effort) : e)))
+  }
 
   /**
    * The shortlist is the curated set plus anything reached for recently. Going
@@ -82,10 +102,10 @@ export function QuickRun({
     const q = query.trim().toLowerCase()
     return all
       .filter((m) => m.modalities.includes(type))
-      .filter((m) => !models.includes(m.id))
+      .filter((m) => !selectedModelIds.includes(m.id))
       .filter((m) => !q || m.label.toLowerCase().includes(q) || m.id.toLowerCase().includes(q))
       .slice(0, 40)
-  }, [all, query, type, models])
+  }, [all, query, type, selectedModelIds])
 
   // Switching what you are making invalidates both the words and the line-up.
   // Opening for a re-run carries the previous run in; changing the modality
@@ -186,7 +206,7 @@ export function QuickRun({
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Describe the task every model will be given…"
-              className="min-h-24 text-[13px] leading-relaxed"
+              className="max-h-[38vh] min-h-24 overflow-y-auto text-[13px] leading-relaxed"
               autoFocus
             />
             <div className="flex flex-wrap gap-1">
@@ -205,6 +225,52 @@ export function QuickRun({
             </div>
           </div>
 
+          {/* Reasoning effort, per model: the levels differ by family, and
+              comparing one model at two efforts is a comparison worth running. */}
+          {reasoningRows.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="flex items-baseline justify-between">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  Reasoning effort
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  Default leaves each model&rsquo;s own setting alone
+                </span>
+              </div>
+              <div className="space-y-1">
+                {reasoningRows.map((row) => (
+                  <div key={row.entry} className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate text-[12px]">{row.label}</span>
+                    <div className="flex items-center gap-0.5 rounded-md border p-0.5">
+                      {([null, 'low', 'medium', 'high'] as const).map((level) => {
+                        const on = (row.effort ?? null) === level
+                        return (
+                          <button
+                            key={level ?? 'default'}
+                            onClick={() => setEffort(row.entry, level)}
+                            className={cn(
+                              'rounded px-1.5 py-0.5 text-[11px] transition',
+                              on ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground hover:text-foreground',
+                            )}
+                          >
+                            {level ?? 'default'}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <button
+                      onClick={() => setModels((prev) => [...prev, buildEntry(row.modelId, 'high')])}
+                      title="Also run this model at another effort, side by side"
+                      className="rounded border border-dashed px-1.5 py-0.5 text-[11px] text-muted-foreground transition hover:text-foreground"
+                    >
+                      + duplicate
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {blocked && (
             <p className="rounded-md border border-dashed px-3 py-2.5 text-[11.5px] leading-relaxed text-muted-foreground">
               No configured provider can generate {type}. OpenRouter serves no video models &mdash; adding a
@@ -222,25 +288,29 @@ export function QuickRun({
             </div>
             <div className="flex flex-wrap gap-1">
               {models
-                .filter((id) => !shortlist.some((m) => m.id === id))
-                .map((id) => (
+                .filter((entry) => !shortlist.some((m) => m.id === entry))
+                .map((entry) => (
                   <button
-                    key={id}
-                    onClick={() => setModels((prev) => prev.filter((x) => x !== id))}
+                    key={entry}
+                    onClick={() => setModels((prev) => prev.filter((x) => x !== entry))}
                     className="inline-flex items-center gap-1.5 rounded-md border border-foreground/25 bg-muted px-2 py-1 text-[11.5px] text-foreground"
-                    title={id}
+                    title={entry}
                   >
-                    {labelOf(id)}
+                    {labelOf(entry)}
                     <X className="size-3 opacity-60" />
                   </button>
                 ))}
               {shortlist.map((m) => {
-                const on = models.includes(m.id)
+                const on = selectedModelIds.includes(m.id)
                 return (
                   <button
                     key={m.id}
                     onClick={() =>
-                      setModels((prev) => (on ? prev.filter((x) => x !== m.id) : [...prev, m.id]))
+                      setModels((prev) =>
+                        on
+                          ? prev.filter((x) => parseEntry(x).modelId !== m.id)
+                          : [...prev, m.id],
+                      )
                     }
                     className={cn(
                       'inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11.5px] transition',

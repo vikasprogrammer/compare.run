@@ -6,6 +6,8 @@ export interface GenerateRequest {
   providerModel: string
   modality: Modality
   prompt: string
+  /** Reasoning effort, when the caller asked for one and the model takes it. */
+  effort?: string
   signal: AbortSignal
 }
 
@@ -46,6 +48,8 @@ export interface ProviderModel {
   id: string
   label: string
   modalities: Modality[]
+  /** Whether the model accepts a reasoning effort. */
+  reasoning?: boolean
   /** USD per million tokens, when the provider publishes it. */
   price?: { in: number; out: number }
 }

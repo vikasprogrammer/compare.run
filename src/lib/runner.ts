@@ -1,6 +1,7 @@
 import crypto from 'node:crypto'
 import { createExperiment, createRun, getExperiment, nextSeq, previousRun, saveResult, setRunStatus } from './db'
 import { modelById } from './catalog'
+import { parseAdHoc, parseEntry } from './model-id'
 import { providersFor } from './providers'
 import type { Experiment, Modality, Result, Run } from './types'
 
@@ -111,10 +112,11 @@ function describeChange(previous: Run | undefined, prompt: string, modelIds: str
   return parts.length ? parts.join(' \u00b7 ') : 'Repeat of the previous run, unchanged'
 }
 
-async function execute(runId: string, run: Run, modelId: string): Promise<void> {
+async function execute(runId: string, run: Run, entry: string): Promise<void> {
   const started = Date.now()
+  const { modelId, effort } = parseEntry(entry)
   const model = modelById(modelId)
-  const base = queued(modelId)
+  const base = queued(entry)
 
   const fail = (message: string) => {
     saveResult(runId, {
@@ -131,9 +133,12 @@ async function execute(runId: string, run: Run, modelId: string): Promise<void> 
 
   // A model is either in the curated catalogue, or an ad-hoc id the picker
   // built as "providerId::providerModel" from a provider's own listing.
+  const adHoc = parseAdHoc(modelId)
   const resolved = model
     ? { providerId: model.providerId, providerModel: model.providerModel, label: model.label }
-    : parseAdHoc(modelId)
+    : adHoc
+      ? { ...adHoc, label: adHoc.providerModel }
+      : null
   if (!resolved) return fail(`Unknown model "${modelId}"`)
 
   const provider = providersFor(experiment.type).find((p) => p.id === resolved.providerId)
@@ -147,10 +152,11 @@ async function execute(runId: string, run: Run, modelId: string): Promise<void> 
 
   try {
     const result = await provider.generate({
-      modelId,
+      modelId: entry,
       providerModel: resolved.providerModel,
       modality: experiment.type,
       prompt: run.prompt,
+      ...(effort ? { effort } : {}),
       // Video generation is minutes, not seconds.
       signal: AbortSignal.timeout(1000 * 60 * (experiment.type === 'video' ? 15 : 5)),
     })
@@ -166,14 +172,4 @@ async function execute(runId: string, run: Run, modelId: string): Promise<void> 
   } catch (err) {
     fail(err instanceof Error ? err.message : String(err))
   }
-}
-
-/** "openrouter::anthropic/claude-opus-4.8" -> provider and wire identifier. */
-function parseAdHoc(modelId: string): { providerId: string; providerModel: string; label: string } | null {
-  const at = modelId.indexOf('::')
-  if (at === -1) return null
-  const providerId = modelId.slice(0, at)
-  const providerModel = modelId.slice(at + 2)
-  if (!providerId || !providerModel) return null
-  return { providerId, providerModel, label: providerModel }
 }

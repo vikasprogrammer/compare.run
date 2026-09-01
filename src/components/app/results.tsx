@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Skeleton } from '@/components/ui/skeleton'
 import { ImageView, VideoView } from '@/components/app/media'
 import { StatusPill } from '@/components/app/bits'
-import { displayModel, displayProvider } from '@/lib/model-name'
+import { displayEntry, displayEntryProvider } from '@/lib/model-id'
 import { formatDuration, formatUsd } from '@/lib/format'
 import type { CodeOutput, ContentOutput, HtmlPreview, Modality, Output, PreviewSpec, Result, Run, SpecPreview } from '@/lib/types'
 
@@ -52,7 +52,7 @@ function ResultCard({
   startedAt: string
   label?: string
 }) {
-  const name = label ?? displayModel(result.modelId)
+  const name = label ?? displayEntry(result.modelId)
   const pending = result.status === 'queued' || result.status === 'running'
   return (
     <article className="flex flex-col overflow-hidden rounded-lg border bg-card">
@@ -61,7 +61,7 @@ function ResultCard({
           <div className="truncate text-[13px] font-medium leading-tight" title={result.modelId}>
             {name}
           </div>
-          <div className="truncate text-[11px] text-muted-foreground">{displayProvider(result.modelId)}</div>
+          <div className="truncate text-[11px] text-muted-foreground">{displayEntryProvider(result.modelId)}</div>
         </div>
         {result.status !== 'complete' && <StatusPill status={result.status} />}
       </header>

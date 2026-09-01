@@ -31,6 +31,8 @@ export interface PickerModel {
   modalities: Modality[]
   note?: string
   price?: { in: number; out: number }
+  /** Whether the model accepts a reasoning effort. */
+  reasoning?: boolean
   curated: boolean
 }
 

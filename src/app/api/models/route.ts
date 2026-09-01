@@ -18,24 +18,17 @@ export async function GET() {
     return NextResponse.json({ models: cached.value, recent: recentModelIds() })
   }
 
-  const curated: PickerModel[] = MODELS.map((m) => ({
-    id: m.id,
-    label: m.label,
-    provider: m.provider,
-    providerId: m.providerId,
-    modalities: m.modalities,
-    note: m.note,
-    ...(m.price ? { price: m.price } : {}),
-    curated: true,
-  }))
-
   const known = new Set(MODELS.map((m) => `${m.providerId}::${m.providerModel}`))
   const extra: PickerModel[] = []
+  // Whether a curated model takes a reasoning effort is only knowable from the
+  // provider's own listing, so collect that first.
+  const reasoningCapable = new Set<string>()
 
   for (const provider of PROVIDERS) {
     if (!provider.isConfigured() || !provider.listModels) continue
     try {
       for (const m of await provider.listModels()) {
+        if (m.reasoning) reasoningCapable.add(`${provider.id}::${m.id}`)
         const id = `${provider.id}::${m.id}`
         if (known.has(id)) continue
         known.add(id)
@@ -45,6 +38,7 @@ export async function GET() {
           provider: provider.label,
           providerId: provider.id,
           modalities: m.modalities,
+          reasoning: Boolean(m.reasoning),
           ...(m.price ? { price: m.price } : {}),
           curated: false,
         })
@@ -54,6 +48,18 @@ export async function GET() {
       // picker; the curated shortlist still works.
     }
   }
+
+  const curated: PickerModel[] = MODELS.map((m) => ({
+    id: m.id,
+    label: m.label,
+    provider: m.provider,
+    providerId: m.providerId,
+    modalities: m.modalities,
+    note: m.note,
+    reasoning: reasoningCapable.has(`${m.providerId}::${m.providerModel}`),
+    ...(m.price ? { price: m.price } : {}),
+    curated: true,
+  }))
 
   const models = [...curated, ...extra.sort((a, b) => a.label.localeCompare(b.label))]
   g.__pgModels = { at: Date.now(), value: models }
