@@ -14,10 +14,9 @@ import type { Catalogue, LaunchInput } from '@/lib/client'
 
 import type { Modality } from '@/lib/types'
 
-/**
- * Everything needed to launch on one screen: what, the words, and who runs it.
- * A three-step wizard is the wrong shape for something you do twenty times a day.
- */
+/** null means "leave the model's own setting alone". */
+const EFFORT_LEVELS = [null, 'low', 'medium', 'high'] as const
+
 /** Pre-filled state for a re-run: same task, edit whatever you want to change. */
 export interface RerunSeed {
   experimentId: string
@@ -80,7 +79,28 @@ export function QuickRun({
 
   const setEffort = (entry: string, effort: string | null) => {
     const { modelId } = parseEntry(entry)
-    setModels((prev) => prev.map((e) => (e === entry ? buildEntry(modelId, effort) : e)))
+    const next = buildEntry(modelId, effort)
+    setModels((prev) => {
+      if (next === entry) return prev
+      // Moving onto a level this model already occupies merges the two rather
+      // than producing a duplicate entry.
+      if (prev.includes(next)) return prev.filter((e) => e !== entry)
+      return prev.map((e) => (e === entry ? next : e))
+    })
+  }
+
+  /** Efforts still free for a model, so duplicating never collides. */
+  const freeEfforts = (modelId: string) => {
+    const used = new Set(
+      models.filter((e) => parseEntry(e).modelId === modelId).map((e) => parseEntry(e).effort ?? null),
+    )
+    return EFFORT_LEVELS.filter((level) => !used.has(level))
+  }
+
+  const duplicate = (modelId: string) => {
+    const free = freeEfforts(modelId)[0]
+    if (free === undefined) return
+    setModels((prev) => [...prev, buildEntry(modelId, free)])
   }
 
   /**
@@ -242,7 +262,7 @@ export function QuickRun({
                   <div key={row.entry} className="flex items-center gap-2">
                     <span className="min-w-0 flex-1 truncate text-[12px]">{row.label}</span>
                     <div className="flex items-center gap-0.5 rounded-md border p-0.5">
-                      {([null, 'low', 'medium', 'high'] as const).map((level) => {
+                      {EFFORT_LEVELS.map((level) => {
                         const on = (row.effort ?? null) === level
                         return (
                           <button
@@ -259,9 +279,14 @@ export function QuickRun({
                       })}
                     </div>
                     <button
-                      onClick={() => setModels((prev) => [...prev, buildEntry(row.modelId, 'high')])}
-                      title="Also run this model at another effort, side by side"
-                      className="rounded border border-dashed px-1.5 py-0.5 text-[11px] text-muted-foreground transition hover:text-foreground"
+                      onClick={() => duplicate(row.modelId)}
+                      disabled={freeEfforts(row.modelId).length === 0}
+                      title={
+                        freeEfforts(row.modelId).length === 0
+                          ? 'Every effort level for this model is already in the run'
+                          : 'Also run this model at another effort, side by side'
+                      }
+                      className="rounded border border-dashed px-1.5 py-0.5 text-[11px] text-muted-foreground transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       + duplicate
                     </button>
@@ -309,7 +334,9 @@ export function QuickRun({
                       setModels((prev) =>
                         on
                           ? prev.filter((x) => parseEntry(x).modelId !== m.id)
-                          : [...prev, m.id],
+                          : prev.includes(m.id)
+                            ? prev
+                            : [...prev, m.id],
                       )
                     }
                     className={cn(
@@ -355,7 +382,7 @@ export function QuickRun({
                     <button
                       key={m.id}
                       onClick={() => {
-                        setModels((prev) => [...prev, m.id])
+                        setModels((prev) => (prev.includes(m.id) ? prev : [...prev, m.id]))
                         setQuery('')
                       }}
                       className="flex w-full items-center gap-2 rounded px-1.5 py-1 text-left transition hover:bg-muted"
